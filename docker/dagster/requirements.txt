@@ -1,0 +1,8 @@
+dagster==1.2.7
+dagit==1.2.7
+dagster-postgres==0.18.7
+# dagster-dbt==0.18.7
+dagster-docker
+pyspark==3.3.2
+dagster-spark==0.18.7
+pydantic == 1.10.10

@@ -1,0 +1,17 @@
+# Environments
+.env
+spark-master.env
+spark-worker.env
+
+# folder
+data/
+dagster_home/.nux/
+dagster_home/.telemetry/
+dagster_home/compute_logs/
+dagster_home/logs/
+docker/notebooks/work/
+docker/notebooks/.ipynb_checkpoints/
+docker/mlflow/
+load_data_into_mysql/
+etl_pipeline/etl_pipeline/assets/__pycache__
+etl_pipeline/etl_pipeline/resources/__pycache__
