@@ -15,3 +15,4 @@ docker/mlflow/
 load_data_into_mysql/
 etl_pipeline/etl_pipeline/assets/__pycache__
 etl_pipeline/etl_pipeline/resources/__pycache__
+etl_pipeline/model_sentiment.pkl
