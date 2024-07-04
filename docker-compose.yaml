@@ -1,22 +1,22 @@
 version: '3.9'
 services:
   # Mysql
-  mysql:
-    image: mysql:8.0
-    container_name: mysql
-    ports:
-      - "3307:3306"
-    environment:
-      - MYSQL_DATABASE=${MYSQL_DATABASESS}
-      - MYSQL_ROOT_USER=${MYSQL_ROOT_USER}
-      - MYSQL_USER=${MYSQL_USER}
-      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
-      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
-    volumes:
-      - mysql:/var/lib/mysql
-      - ./load_data_into_mysql/stock_market.sql:/tmp/stock_market.sql
-    networks:
-      - de_network
+  # mysql:
+  #   image: mysql:8.0
+  #   container_name: mysql
+  #   ports:
+  #     - "3307:3306"
+  #   environment:
+  #     - MYSQL_DATABASE=${MYSQL_DATABASESS}
+  #     - MYSQL_ROOT_USER=${MYSQL_ROOT_USER}
+  #     - MYSQL_USER=${MYSQL_USER}
+  #     - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+  #     - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+  #   volumes:
+  #     - mysql:/var/lib/mysql
+  #     - ./load_data_into_mysql/stock_market.sql:/tmp/stock_market.sql
+  #   networks:
+  #     - de_network
 
   # Postgresql
   psql:
@@ -85,16 +85,28 @@ services:
     # entrypoint: >
     #   /bin/sh -c " until (/usr/bin/mc config host add minio http://minio:9000 minio_username minio_password) do echo '...waiting...' && sleep 10; done; /usr/bin/mc mb minio/mlflow; /usr/bin/mc policy set public minio/mlflow; tail -f /dev/null;"
     entrypoint: >
-        /bin/sh -c " until (/usr/bin/mc config host add minio http://minio:9000 minio_username minio_password) do echo '...waiting...' && sleep 10; done; tail -f /dev/null;"
+        /bin/sh -c " until (/usr/bin/mc config host add minio http://minio:9000 minio_username minio_password) do echo '...waiting...' && sleep 10; done; /usr/bin/mc mb minio/lakehouse; tail -f /dev/null;"
     depends_on:
       - minio
     networks:
       - de_network
 
   # Trino
-  trino:
-    hostname: trino
-    image: 'trinodb/trino:359'
+  # trino:
+  #   hostname: trino
+  #   image: 'trinodb/trino:359'
+  #   ports:
+  #     - '8085:8080'
+  #   volumes:
+  #     - ./docker/data_lakehouse/etc:/etc/trino
+  #   networks:
+  #     - de_network
+  #   depends_on:
+  #     - minio
+  #     - hive-metastore
+  trino-450:
+    hostname: trino-450
+    image: 'trinodb/trino:450'
     ports:
       - '8085:8080'
     volumes:
@@ -125,18 +137,21 @@ services:
       - de_network
 
   spark-worker-1:
-    image: docker.io/bitnami/spark:3.3.2
+    # image: docker.io/bitnami/spark:3.3.2
+    build: 
+      context: ./docker/spark_cluster
+      dockerfile: Dockerfile
     container_name: "spark-worker-1"
     env_file: 
       - spark-worker.env
     networks:
       - de_network
 
-  spark-notebook:
+  spark-notebookk:
     build: 
       context: ./docker/notebooks
       dockerfile: Dockerfile
-    container_name: "spark-notebook"
+    container_name: "spark-notebookk"
     user: root
     env_file: .env
     volumes:
@@ -149,34 +164,32 @@ services:
       - de_network
 
   # UI dashboard
-  superset:
-    build:
-      context: ./docker/superset
-      dockerfile: Dockerfile
-    container_name: Superset
-    env_file:
-      - .env
-    ports:
-      - '8088:8088'
-    volumes:
-      - superset_home:/app/superset_home
-    networks:
-    - de_network
-
-  # Streamlit
-  # streamlit:
+  # superset:
   #   build:
-  #     context: ./docker/streamlit
+  #     context: ./docker/superset
   #     dockerfile: Dockerfile
-  #   container_name: streamlit
-  #   volumes:
-  #     - ./app:/app
+  #   container_name: Superset
   #   env_file:
   #     - .env
   #   ports:
-  #     - "8501:8501"
+  #     - '8088:8088'
+  #   volumes:
+  #     - superset_home:/app/superset_home
   #   networks:
-  #     - de_network
+  #   - de_network
+
+  # Flask
+  flaskk:
+    build:
+      context: ./flask
+      dockerfile: Dockerfile
+    container_name: flaskk
+    volumes:
+      - ./flask:/app
+    ports:
+      - "5000:5000"
+    networks:
+      - de_network
 
   # UI mlflow
   # web:
@@ -254,11 +267,26 @@ services:
       - "4000"
     networks:
       - de_network
+  # etl_pipelinee:
+  #   build:
+  #     context: ./etl_pipeline
+  #     dockerfile: Dockerfile
+  #   container_name: etl_pipelinee
+  #   user: root
+  #   volumes:
+  #     - ./etl_pipeline:/opt/dagster/app/etl_pipeline
+  #     - ./etl_pipeline/spark-defaults.conf:/usr/local/spark/conf/spark-defaults.conf
+  #   env_file:
+  #     - .env
+  #   expose:
+  #     - "4000"
+  #   networks:
+  #     - de_network
 
 volumes:
   minio: {}
   postgres_data: {}
-  mysql: {}
+  # mysql: {}
   mariadb: {}
   superset_home: {}
 

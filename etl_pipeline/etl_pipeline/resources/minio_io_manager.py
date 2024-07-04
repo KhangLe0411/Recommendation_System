@@ -1,6 +1,7 @@
 from dagster import IOManager, OutputContext, InputContext
 from minio import Minio
 import polars as pl
+import pandas as pd
 
 from contextlib import contextmanager
 from datetime import datetime
@@ -57,7 +58,7 @@ class MinioIOManager(IOManager):
             # bronze/schema/table.parquet
             return f"{key}.parquet", tmp_file_path 
 
-    def handle_output(self, context: OutputContext, obj: pl.DataFrame):
+    def handle_output(self, context: OutputContext, obj: pd.DataFrame):
         """
             Receives output and convert to parquet and upload to MinIO
         """
@@ -65,7 +66,8 @@ class MinioIOManager(IOManager):
 
         # convert from polars Dataframe to parquet
         # E.x: /tmp/file_bronze_stock_bronze_stocks_xxxxxx.parquet
-        obj.write_parquet(tmp_file_path)
+        # obj.write_parquet(tmp_file_path)
+        obj.to_parquet(tmp_file_path)
 
         # Save to MinIO
         try:
@@ -89,7 +91,7 @@ class MinioIOManager(IOManager):
         except Exception as e:
             raise e
 
-    def load_input(self, context: InputContext) -> pl.DataFrame:
+    def load_input(self, context: InputContext) -> pd.DataFrame:
         """
            Prepares input and downloads parquet file from MinIO and convert to Polars Dataframe 
         """
@@ -108,7 +110,8 @@ class MinioIOManager(IOManager):
                 # tmp_file_path: /tmp/file_bronze_stock_bronze_stocks_xxxxxxxxx.parquet
                 context.log.info(f"(MinIO load_input) from key_name: {key_name}")
                 client.fget_object(bucket_name, key_name, tmp_file_path)
-                df_data = pl.read_parquet(tmp_file_path)
+                # df_data = pl.read_parquet(tmp_file_path)
+                df_data = pd.read_parquet(tmp_file_path)
                 context.log.info(
                     f"(MinIO load_input) Got polars dataframe with shape: {df_data.shape}"
                 )

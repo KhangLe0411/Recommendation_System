@@ -45,18 +45,25 @@ resources = {
 defs = Definitions(
     # assets=load_assets_from_modules([assets]),
     assets=[
-        bronze_companies,
-        bronze_trades,
+        bronze_keywords,
+        bronze_credits,
+        bronze_links,
+        bronze_movies,
+        bronze_ratings,
+        bronze_review,
 
-        silver_cleaned_companies,
-        silver_cleaned_trades,
-        silver_dim_company,
-        silver_dim_date,
-        silver_fact_stock,
+        silver_cleaned_keywords,
+        silver_cleaned_movies,
+        silver_cleaned_credits,
+        silver_cleaned_ratings,
+        silver_merge_df,
+        silver_fit_model,
+        silver_cleaned_review,
+        silver_sentiment_model,
 
-        gold_stock_price_change,
-        gold_stock_gainer_daily,
-        gold_stock_loser_daily,
+        gold_transform_model
+        # gold_stock_gainer_daily,
+        # gold_stock_loser_daily,
     ],
     resources=resources
 )

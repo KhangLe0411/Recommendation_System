@@ -1,0 +1,17 @@
+flask
+scikit-learn
+beautifulsoup4
+tmdbv3api
+pickleshare
+boto3
+pyspark==3.3.2
+Pandas>=1.0.5
+numpy==1.26.0
+requests
+lxml
+minio==7.1.13
+# gunicorn==19.9.0
+# Jinja2==2.11.3
+# Werkzeug==0.15.5
+nltk==3.5
+# urllib3==1.26.5

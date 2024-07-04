@@ -6,3 +6,4 @@ dagster-docker
 pyspark==3.3.2
 dagster-spark==0.18.7
 pydantic == 1.10.10
+pendulum<3.0

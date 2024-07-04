@@ -1,7 +1,7 @@
 dagit==1.2.7
 dagster==1.2.7
 dagster-postgres==0.18.7
-dagster-aws==0.18.7
+# dagster-aws==0.18.7
 # dagster-dbt==0.18.3
 dagster-spark==0.18.7
 pandas==1.5.3
@@ -31,3 +31,7 @@ streamlit-pandas-profiling
 streamlit-elements
 dagster-docker
 pydantic == 1.10.10
+pendulum<3.0
+scikit-learn==1.0.2
+nltk==3.8.1
+beautifulsoup4

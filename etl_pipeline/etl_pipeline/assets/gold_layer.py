@@ -2,132 +2,46 @@ from dagster import asset, AssetIn, Output
 from ..resources.spark_io_manager import init_spark_session
 from pyspark.sql import DataFrame
 from pyspark.sql.functions import *
+from pyspark.ml import PipelineModel
+from pyspark.sql.types import StructType, StructField, StringType, ArrayType, DoubleType
 
 COMPUTE_KIND = "PySpark"
 LAYER = "gold"
 
 
 @asset(
-    description="Create table stock price change",
+    description="Transform model",
     ins={
-        "silver_fact_stock": AssetIn(
-            key_prefix=["silver", "trade"]
-        ),
-        "silver_dim_company": AssetIn(
-            key_prefix=["silver", "company"]
-        ),
-        "silver_dim_date": AssetIn(
-            key_prefix=["silver", "trade"]
+        "silver_merge_df": AssetIn(
+            key_prefix=["silver", "final"]
         ),
     },
     io_manager_key="spark_io_manager",
-    key_prefix=[LAYER, "price_change"],
+    key_prefix=[LAYER, "transform_model"],
     metadata={"mode": "overwrite"},
     compute_kind=COMPUTE_KIND,
     group_name=LAYER
 )
-def gold_stock_price_change(context, silver_fact_stock: DataFrame, silver_dim_company: DataFrame, silver_dim_date: DataFrame) -> Output[DataFrame]:
-    context.log.debug("Start creating price change table ...")
-
+def gold_transform_model(context, silver_merge_df: DataFrame) -> Output[DataFrame]:
+    context.log.debug("Start transform model ...")
+    schema = StructType([
+        StructField("id", StringType(), True),
+        StructField("vecs", ArrayType(DoubleType()), True)
+    ])
+    spark_df = silver_merge_df.select('id', 'comb')
+    pipeline_mdl = PipelineModel.load("s3a://lakehouse/model/" + 'pipeline_model')
+    new_df = pipeline_mdl.transform(spark_df)
+    all_movies_vecs = new_df.select('id', 'word_vec').rdd.map(lambda x: (x[0], x[1])).collect()
+    data = [(id, [float(x) for x in vec]) for id, vec in all_movies_vecs]
     with init_spark_session() as spark:
-        # spark.sql("CREATE SCHEMA IF NOT EXISTS hive_prod.gold")
-        spark_df = (
-            silver_fact_stock
-            .withColumn("day_price_change", col('close_price') - col('open_price'))
-            .withColumn("percent_change", bround((col('day_price_change') / col('open_price')) * 100, 2))
-            .join(silver_dim_date, 'dateKey', 'inner')
-            .join(silver_dim_company, 'companyKey', 'inner')
-            .select('companyKey', 'organShortName', 'full_date', 'open_price', 'close_price', 'Volume', 'day_price_change', 'percent_change')
-        )
-
-        return Output(
-            value=spark_df,
-            metadata={
-                "table": "gold_stock_price_change",
-                "row_count": spark_df.count(),
-                "column_count": len(spark_df.columns),
-                "columns": spark_df.columns,
-            },
-        )
-
-
-@asset(
-    description="Create table stock gainers",
-    ins={
-        "gold_stock_price_change": AssetIn(
-            key_prefix=["gold", "price_change"]
-        ),
-    },
-    io_manager_key="spark_io_manager",
-    key_prefix=[LAYER, "stock_gainers"],
-    metadata={"mode": "overwrite"},
-    compute_kind=COMPUTE_KIND,
-    group_name=LAYER
-)
-def gold_stock_gainer_daily(context, gold_stock_price_change: DataFrame) -> Output[DataFrame]:
-    context.log.debug("Start creating stock gainer daily table ...")
-
-    spark_df = (
-        gold_stock_price_change
-        .withColumnRenamed("companyKey", "symbol")
-        .filter(col('percent_change') > 0)
-        .groupBy('symbol', 'organShortName', 'full_date')
-        .agg(
-            sum('open_price').alias('open'),
-            sum('close_price').alias('close'),
-            sum('day_price_change').alias('price_change'),
-            sum('percent_change').alias('%_change'),
-        )
-        .orderBy(desc(max('full_date')), desc(max('percent_change')))
-    )
+        all_movies_df = spark.createDataFrame(data, schema)
 
     return Output(
-        value=spark_df,
+        value=all_movies_df,
         metadata={
-            "table": "gold_stock_gainer_daily",
-            "row_count": spark_df.count(),
-            "column_count": len(spark_df.columns),
-            "columns": spark_df.columns,
-        },
-    )
-
-
-@asset(
-    description="Create table stock loser",
-    ins={
-        "gold_stock_price_change": AssetIn(
-            key_prefix=["gold", "price_change"]
-        ),
-    },
-    io_manager_key="spark_io_manager",
-    key_prefix=[LAYER, "stock_losers"],
-    metadata={"mode": "overwrite"},
-    compute_kind=COMPUTE_KIND,
-    group_name=LAYER
-)
-def gold_stock_loser_daily(context, gold_stock_price_change: DataFrame) -> Output[DataFrame]:
-    context.log.debug("Start creating stock loser daily table ...")
-
-    spark_df = (
-        gold_stock_price_change
-        .withColumnRenamed("companyKey", "symbol")
-        .filter(col('percent_change') <= 0)
-        .groupBy('symbol', 'organShortName', 'full_date')
-        .agg(
-            sum('open_price').alias('open'),
-            sum('close_price').alias('close'),
-            sum('day_price_change').alias('price_change'),
-            sum('percent_change').alias('%_change'),
-        )
-        .orderBy(desc(max('full_date')), asc(min('percent_change')))
-    )
-
-    return Output(
-        value=spark_df,
-        metadata={
-            "table": "gold_stock_loser_daily",
-            "row_count": spark_df.count(),
-            "column_count": len(spark_df.columns),
-            "columns": spark_df.columns,
+            "table": "gold_transform_model",
+            "row_count": all_movies_df.count(),
+            "column_count": len(all_movies_df.columns),
+            "columns": all_movies_df.columns,
         },
     )
