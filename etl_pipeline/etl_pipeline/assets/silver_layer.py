@@ -459,13 +459,13 @@ def silver_sentiment_model(context, silver_cleaned_review: DataFrame):
         strip_accents=None, lowercase=False, preprocessor=None)
     param_grid = [{'vect__ngram_range': [(1, 1), (1, 2)],
                    'vect__stop_words': [stop, None],
-                   'vect__use_idf': [False],
+                   'vect__use_idf': [True, False],
                    'clf__penalty': [None, 'l2']
                    }]
     lr_tfidf = Pl(
         [('vect', tfidf), ('clf', LogisticRegression(random_state=0, max_iter=500))])
     gs_lr_tfidf = GridSearchCV(lr_tfidf, param_grid, scoring='accuracy',
-                               cv=5, verbose=1, n_jobs=None, error_score=np.nan)
+                               cv=5, verbose=1, n_jobs=None)
     gs_lr_tfidf.fit(X_train, y_train)
     context.log.debug('Best parameter set: ' + str(gs_lr_tfidf.best_params_))
     context.log.debug('Best accuracy: %.3f' % gs_lr_tfidf.best_score_)

@@ -59,17 +59,17 @@ services:
       - de_network
 
   # Minio Client
-  mc:
-    image: minio/mc
-    container_name: mc
-    hostname: mc
-    env_file: .env
-    entrypoint: >
-        /bin/sh -c " until (/usr/bin/mc config host add minio http://minio:9000 minio_username minio_password) do echo '...waiting...' && sleep 10; done; /usr/bin/mc mb minio/lakehouse; tail -f /dev/null;"
-    depends_on:
-      - minio
-    networks:
-      - de_network
+  # mc:
+  #   image: minio/mc
+  #   container_name: mc
+  #   hostname: mc
+  #   env_file: .env
+  #   entrypoint: >
+  #       /bin/sh -c " until (/usr/bin/mc config host add minio http://minio:9000 minio_username minio_password) do echo '...waiting...' && sleep 10; done; /usr/bin/mc mb minio/lakehouse; tail -f /dev/null;"
+  #   depends_on:
+  #     - minio
+  #   networks:
+  #     - de_network
 
   # Trino
   # trino:
@@ -126,6 +126,16 @@ services:
     networks:
       - de_network
 
+  spark-worker-2:
+    build: 
+      context: ./docker/spark_cluster
+      dockerfile: Dockerfile
+    container_name: "spark-worker-2"
+    env_file: 
+      - spark-worker.env
+    networks:
+      - de_network
+
   # spark-notebookk:
   #   build: 
   #     context: ./docker/notebooks
@@ -167,23 +177,6 @@ services:
       - ./flask:/app
     ports:
       - "5000:5000"
-    networks:
-      - de_network
-
-  # UI mlflow
-  web:
-    restart: always
-    build: ./docker/mlflow
-    image: mlflow_server
-    container_name: mlflow_server
-    depends_on:
-      - mc
-      - mysql
-    ports:
-      - "7893:5000"
-    env_file:
-      - .env
-    command: mlflow server --backend-store-uri mysql+pymysql://${MYSQL_ROOT_USER}:${MYSQL_ROOT_PASSWORD}@mysql:3306/${MYSQL_DATABASESS} --default-artifact-root s3://mlflow/ --host 0.0.0.0
     networks:
       - de_network
 
